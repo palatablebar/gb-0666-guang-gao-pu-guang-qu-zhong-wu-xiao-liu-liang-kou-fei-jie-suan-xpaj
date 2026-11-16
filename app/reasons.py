@@ -1,0 +1,1 @@
+REASONS={"COLUMN_COUNT":"列数不符","REPEATED_HEADER":"重复表头","MISSING":"必要值缺失","TIME":"时间无效","DUPLICATE":"重复回调","CONFLICT":"曝光ID冲突","CONTRACT":"资费无效","BOT":"机器流量","CAP":"频次上限","REFERENCE":"冲销引用无效","OVER_REVERSE":"重复冲销","CHANNEL":"跨渠道冲销","REVERSE_TIME":"冲销早于曝光"}

@@ -1,0 +1,1 @@
+document.querySelectorAll('.filter').forEach(input=>input.addEventListener('input',()=>{const text=input.value.toLowerCase();input.closest('.panel').querySelectorAll('tbody tr').forEach(row=>{row.hidden=!row.textContent.toLowerCase().includes(text);});}));
