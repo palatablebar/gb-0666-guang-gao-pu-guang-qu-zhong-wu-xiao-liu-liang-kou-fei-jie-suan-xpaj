@@ -2,7 +2,7 @@ import csv,io,json
 from app.errors import reject
 def validate(options):
     if set(options)-{"sample","text","params"}:reject("PARAMETER","存在未知运行参数")
-    if options.get("sample","dirty") not in {"dirty","clean","gb18030"}:reject("SAMPLE","样例不存在")
+    if options.get("sample","dirty") not in {"dirty","clean","gb18030","overlap"}:reject("SAMPLE","样例不存在")
     if "text" in options and not isinstance(options["text"],str):reject("CONTENT","文件内容须为文本")
     if not isinstance(options.get("params",{}),dict):reject("PARAMETER","参数须为对象")
     if options.get("params"):reject("PARAMETER","该项目无可调计算参数")

@@ -1,0 +1,2 @@
+event_id,at,channel,user_id,ip,kind,ref,bot,campaign_id
+OV-1000,2026-11-01T09:55:00+08:00,DSP-B,U100,192.0.2.30,impression,,0,CMP-100

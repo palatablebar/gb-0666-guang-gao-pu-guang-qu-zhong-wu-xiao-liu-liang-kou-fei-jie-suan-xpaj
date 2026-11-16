@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block scripts %}<script src="/static/overlap.js" defer></script>{% endblock %}
+{% block evidence_link %}<a class="action" href="/api/overlap/bills/{{ data.manifest.bill_id }}/evidence.csv{% if data.manifest.version and data.manifest.version != 1 %}?version={{ data.manifest.version }}{% endif %}">导出账单证据 ↗</a>{% endblock %}
+{% block panels %}
+<section class="panel report-table">
+  <div class="panel__head"><h2>渠道应付正式账单</h2><span>窗口 {{ data.overlap_bill.window_minutes }} 分钟 · {{ data.overlap_bill.currency }}</span></div>
+  <div class="panel__body flush">
+    {{ ledger(data.overlap_bill.channel_bills,[('channel','渠道'),('day','账日(北京)'),('impressions','有效曝光'),('overlap_losers','重叠曝光'),('retained','保留曝光'),('gross','原始 / 元'),('overlap_credit','重叠抵扣 / 元'),('net','应付 / 元'),('status','结果')]) }}
+  </div>
+</section>
+<section class="panel distribution">
+  <div class="panel__head"><h2>费用守恒与裁决</h2><span>V{{ data.manifest.version }}</span></div>
+  <div class="panel__body">
+    <div class="equation"><b>{{ data.overlap_bill.summary.gross }}</b><span>－</span><b>{{ data.overlap_bill.summary.reversal_credit }}</b><span>－</span><b>{{ data.overlap_bill.summary.overlap_credit }}</b><span>＝</span><b>{{ data.overlap_bill.summary.net }}</b></div>
+    <div class="audit-line"><span>重叠组</span><b>{{ data.overlap_bill.summary.overlap_groups }}</b></div>
+    <div class="audit-line"><span>被抵扣重叠曝光</span><b>{{ data.overlap_bill.summary.overlap_impressions }}</b></div>
+    <div class="audit-line"><span>保留收入的曝光</span><b>{{ data.overlap_bill.summary.retained_winners }}</b></div>
+    <div class="audit-line"><span>金额守恒</span><b>{{ '通过' if data.overlap_bill.summary.amount_ok else '失败' }}</b></div>
+    <div class="audit-line"><span>每条曝光至多抵扣一次</span><b>{{ '通过' if data.overlap_bill.summary.deduction_once_ok else '失败' }}</b></div>
+    <p class="rule-basis">{{ data.overlap_bill.rule_basis }}</p>
+  </div>
+</section>
+<section class="panel report-table">
+  <div class="panel__head"><h2>跨渠道重叠组与判断依据</h2><input class="filter" type="search" placeholder="筛选重叠组" aria-label="筛选重叠组"></div>
+  <div class="panel__body flush overlap-groups">
+    {% for group in data.overlap_bill.overlap_groups %}
+    <div class="overlap-card">
+      <div class="overlap-card__head"><b>{{ group.group_id }}</b><span>活动 {{ group.campaign_id }} · 用户 {{ group.user_id }}</span><span>{{ group.window_start_bj }} ～ {{ group.window_end_bj }}（北京时间）</span></div>
+      <div class="overlap-row winner"><span class="tag">保留</span><span>{{ group.winner.event_id }}</span><span>{{ group.winner.channel }}</span><span>{{ group.winner.at_bj }}</span><span>来源行 {{ group.winner.line }}</span><em>{{ group.winner.basis }}</em></div>
+      {% for loser in group.losers %}
+      <div class="overlap-row loser"><span class="tag warn">抵扣</span><span>{{ loser.event_id }}</span><span>{{ loser.channel }}</span><span>{{ loser.at_bj }}</span><span>来源行 {{ loser.line }} · 间隔 {{ loser.gap_minutes }} 分钟</span><em>{{ loser.basis }}</em></div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty-note">当前批次无跨渠道重叠曝光。</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block audit %}
+<section class="panel audit">
+  <div class="panel__head"><h2>账单复核</h2><span class="square-status pass">已复算</span></div>
+  <div class="panel__body">
+    <div class="audit-line"><span>重叠抵扣后金额守恒</span><b>{{ '通过' if data.overlap_bill.summary.amount_ok else '失败' }}</b></div>
+    <div class="audit-line"><span>同一曝光至多抵扣一次</span><b>{{ '通过' if data.overlap_bill.summary.deduction_once_ok else '失败' }}</b></div>
+    <div class="audit-line"><span>原始费用 / 元</span><b>{{ data.overlap_bill.summary.gross }}</b></div>
+    <div class="audit-line"><span>冲销抵扣 / 元</span><b>{{ data.overlap_bill.summary.reversal_credit }}</b></div>
+    <div class="audit-line"><span>重叠抵扣 / 元</span><b>{{ data.overlap_bill.summary.overlap_credit }}</b></div>
+    <div class="audit-line"><span>广告主应付 / 元</span><b>{{ data.overlap_bill.summary.net }}</b></div>
+    <div class="audit-line"><span>账单渠道数</span><b>{{ data.overlap_bill.channel_bills|length }}</b></div>
+  </div>
+</section>
+{% endblock %}
+{% block controls %}
+<section class="panel controls">
+  <div class="panel__head"><h2>账单版本与补数</h2><span>V{{ data.manifest.version }} · {{ data.manifest.kind }}</span></div>
+  <div class="panel__body">
+    <form id="overlap-input">
+      <label>首次结算样例<select name="sample"><option value="overlap">跨渠道重叠+晚到补数</option><option value="clean">基准台账</option><option value="dirty">异常台账</option></select></label>
+      <button class="action solid" type="submit">按样例首次结算</button>
+    </form>
+    <form id="backfill-form" data-bill="{{ data.manifest.bill_id }}">
+      <details {% if data.get('backfill') %}open{% endif %}><summary>晚到曝光补数（再次结算）</summary>
+        <textarea name="text" rows="4" aria-label="补数CSV" placeholder="粘贴补数CSV，表头须与原台账一致"></textarea>
+      </details>
+      <button class="action" type="submit">补齐后再次结算</button>
+    </form>
+    {% if data.get('backfill') %}
+    <p class="backfill-note">基于 V{{ data.backfill.base_version }} 补数：新增 {{ data.backfill.added_events }} 条，幂等跳过 {{ '是' if data.backfill.retry_idempotent else '否' }}</p>
+    {% endif %}
+    <p id="feedback" role="status" aria-live="polite"></p>
+    <div class="version-chain">
+      <h3>版本链（旧版永久保留）</h3>
+      {% for item in data.history %}
+      <div class="audit-line"><a href="/overlap?run_id={{ item.bill_id }}&version={{ item.version }}">V{{ item.version }} · {{ item.kind }}</a><b>{{ item.created_at }}</b></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

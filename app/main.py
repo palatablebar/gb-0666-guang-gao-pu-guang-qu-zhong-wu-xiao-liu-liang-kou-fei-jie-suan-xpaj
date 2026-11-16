@@ -32,3 +32,5 @@ from app.modules.m6_reconcile.handler import router as route6
 app.include_router(route6)
 from app.modules.m7_batches.handler import router as route7
 app.include_router(route7)
+from app.modules.m8_overlap.handler import router as route8
+app.include_router(route8)

@@ -1,6 +1,8 @@
 import csv,io
+from app.config import DEFAULT_CAMPAIGN
 from app.errors import reject
 COLUMNS=['event_id', 'at', 'channel', 'user_id', 'ip', 'kind', 'ref', 'bot']
+OPTIONAL_COLUMNS=COLUMNS+['campaign_id']
 def decode(raw):
     for encoding in ("utf-8-sig","gb18030"):
         try:return raw.decode(encoding),encoding
@@ -13,7 +15,9 @@ def read(raw):
     reader=csv.reader(io.StringIO(text,newline=""),strict=True)
     try:header=next(reader)
     except (StopIteration,csv.Error):reject("HEADER","表头无效")
-    if header!=COLUMNS:reject("HEADER","字段与契约不符")
+    if header==COLUMNS:fields=COLUMNS
+    elif header==OPTIONAL_COLUMNS:fields=OPTIONAL_COLUMNS
+    else:reject("HEADER","字段与契约不符")
     rows=[];bad=[];blank=0;total=0
     try:
         for values in reader:
@@ -21,8 +25,10 @@ def read(raw):
             if not values or all(not x.strip() for x in values):blank+=1;continue
             if values==header:bad.append({"line":line,"code":"REPEATED_HEADER","raw":values});continue
             if len(values)!=len(header):bad.append({"line":line,"code":"COLUMN_COUNT","raw":values});continue
-            rows.append({**dict(zip(header,values)),"line":line})
+            row={**dict(zip(fields,values)),"line":line}
+            if "campaign_id" not in row or not row["campaign_id"].strip():row["campaign_id"]=DEFAULT_CAMPAIGN
+            rows.append(row)
     except csv.Error:reject("CSV","CSV结构损坏")
     if total==0:reject("HEADER_ONLY","只有表头")
     if blank==total:reject("BLANK_ONLY","记录全部为空")
-    return {"rows":rows,"quarantine":bad,"input_count":total,"blank_count":blank,"encoding":encoding}
+    return {"rows":rows,"quarantine":bad,"input_count":total,"blank_count":blank,"encoding":encoding,"columns":fields}

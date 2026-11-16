@@ -3,12 +3,16 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.config import MODULES,TITLE,RULE_VERSION
 from app.modules.m7_batches.service import run
+from app.modules.m8_overlap.service import run as run_overlap,load as load_bill
 from app.store import fetch
 router=APIRouter();templates=Jinja2Templates(directory="app/templates")
 @router.get("/")
 def home():return RedirectResponse("/model")
 def page(request,slug,run_id):
-    data=fetch(run_id) if run_id else run({"sample":"dirty"})
+    if slug=="overlap":
+        data=load_bill(run_id) if run_id else run_overlap({"sample":"overlap"})
+    else:
+        data=fetch(run_id) if run_id else run({"sample":"dirty"})
     return templates.TemplateResponse(request=request,name=slug+".html",context={"data":data,"title":TITLE,"modules":MODULES,"slug":slug,"page_title":dict(MODULES)[slug],"version":RULE_VERSION})
 for slug,label in MODULES:
     def view(request:Request,run_id:str|None=None,_slug=slug):return page(request,_slug,run_id)
